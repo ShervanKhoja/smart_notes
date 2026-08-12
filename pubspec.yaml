@@ -1,0 +1,30 @@
+name: smart_notes
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  lottie: ^3.1.2
+  google_fonts: ^6.2.1
+  shared_preferences: ^2.3.0
+  supabase_flutter: ^2.5.0 # تمت الإضافة هنا
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/take_note.json
+    - assets/create_account.json
+    - assets/welcome_back.json
