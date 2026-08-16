@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'edit_note.dart';
 import 'main.dart';
+import 'app_scaffold.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -12,45 +13,43 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   // ==========================================
-  // [1] متغيرات وحالات الشاشة (States & Controllers)
+  // [1] متغيرات وحالات الشاشة
   // ==========================================
-  List<Map<String, dynamic>> notes = [];          // قائمة الملاحظات الأصلية الجلبة من السيرفر
-  List<Map<String, dynamic>> filteredNotes = [];  // قائمة الملاحظات المفلترة (تستخدم للبحث)
-  bool isLoading = true;                          // مؤشر التحميل أثناء جلب البيانات
-  bool isSearching = false;                       // حالة البحث (هل شريط البحث مفتوح أم لا)
-  final TextEditingController searchController = TextEditingController(); // متحكم حقل البحث
+  List<Map<String, dynamic>> notes = [];
+  List<Map<String, dynamic>> filteredNotes = [];
+  bool isLoading = true;
+  bool isSearching = false;
+  final TextEditingController searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _fetchNotesFromSupabase(); // جلب الملاحظات فور فتح الشاشة
+    _fetchNotesFromSupabase();
   }
 
   // ==========================================
-  // [2] دالة جلب الملاحظات من Supabase (Fetch Data)
+  // [2] دالة جلب الملاحظات
   // ==========================================
   Future<void> _fetchNotesFromSupabase() async {
     setState(() => isLoading = true);
     try {
       final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return;
 
-      if (user == null) return; // التأكد من وجود مستخدم مسجل دخول
-
-      // جلب الملاحظات التي تخص الـ ID للمستخدم الحالي فقط مع ترتيبها من الأحدث للأقدم
       final response = await Supabase.instance.client
           .from('notes')
           .select()
-          .eq('user_id', user.id) // عزل الملاحظات الخاصة بالمستخدم الحالي فقط
+          .eq('user_id', user.id)
           .order('created_at', ascending: false);
 
       setState(() {
         notes = List<Map<String, dynamic>>.from(response);
-        filteredNotes = notes; // تعيين القائمة المفلترة لتساوي القائمة الأصلية مبدئياً
+        filteredNotes = notes;
       });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("خطأ في جلب الملاحظات: $e")),
+          SnackBar(content: Text("Error fetching notes: $e")),
         );
       }
     } finally {
@@ -61,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ==========================================
-  // [3] دالة فلترة الملاحظات أثناء البحث (Search Function)
+  // [3] دالة فلترة الملاحظات (بالعنوان فقط)
   // ==========================================
   void _filterNotes(String query) {
     setState(() {
@@ -70,15 +69,14 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         filteredNotes = notes
             .where((note) =>
-        (note['title'] ?? '').toString().toLowerCase().contains(query.toLowerCase()) ||
-            (note['content'] ?? '').toString().toLowerCase().contains(query.toLowerCase()))
+            (note['title'] ?? '').toString().toLowerCase().contains(query.toLowerCase()))
             .toList();
       }
     });
   }
 
   // ==========================================
-  // [4] دالة حذف الملاحظة من قاعدة البيانات (Delete Note)
+  // [4] دالة حذف الملاحظة
   // ==========================================
   Future<void> _deleteNote(dynamic noteId) async {
     try {
@@ -86,20 +84,16 @@ class _HomeScreenState extends State<HomeScreen> {
           .from('notes')
           .delete()
           .eq('id', noteId);
-
-      _fetchNotesFromSupabase(); // إعادة تحديث القائمة بعد الحذف
+      _fetchNotesFromSupabase();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("فشل حذف الملاحظة: $e")),
+          SnackBar(content: Text("Failed to delete note: $e")),
         );
       }
     }
   }
 
-  // ==========================================
-  // [5] نافذة تأكيد الحذف المنبثقة (Delete Dialog)
-  // ==========================================
   void _showDeleteDialog(dynamic noteId) {
     final bool isDarkMode = themeNotifier.value == ThemeMode.dark;
 
@@ -109,19 +103,33 @@ class _HomeScreenState extends State<HomeScreen> {
         return AlertDialog(
           backgroundColor: isDarkMode ? Colors.grey[850] : Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text("حذف الملاحظة", style: TextStyle(color: isDarkMode ? Colors.white : Colors.black)),
-          content: Text("هل أنت متأكد من أنك تريد حذف هذه الملاحظة؟", style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54)),
+          title: Text(
+            "Delete Note",
+            style: TextStyle(
+              color: isDarkMode ? Colors.white : Colors.black,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            "Are you sure you want to delete this note?",
+            style: TextStyle(
+              color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+            ),
+          ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context), // إغلاق النافذة دون حذف
-              child: const Text("إلغاء", style: TextStyle(color: Colors.grey)),
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
             ),
             TextButton(
               onPressed: () {
-                Navigator.pop(context); // إغلاق نافذة التأكيد
-                _deleteNote(noteId);     // تنفيذ عملية الحذف
+                Navigator.pop(context);
+                _deleteNote(noteId);
               },
-              child: const Text("حذف", style: TextStyle(color: Colors.redAccent)),
+              child: const Text(
+                "Delete",
+                style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         );
@@ -129,73 +137,65 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // دالة لتسجيل الخروج والذهاب لصفحة اللوجن
+  void _logout() async {
+    await Supabase.instance.client.auth.signOut();
+    if (mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = themeNotifier.value == ThemeMode.dark;
-
-    // تحديد الألوان ديناميكياً حسب الوضع الليلي أو الفاتح
-    final backgroundColor = isDarkMode ? Colors.grey[900] : Colors.white;
     final textColor = isDarkMode ? Colors.white : Colors.black;
     final subTextColor = isDarkMode ? Colors.white70 : Colors.grey;
     final cardColor = isDarkMode ? Colors.grey[850] : Colors.grey.shade100;
     final fabColor = isDarkMode ? Colors.white : Colors.black;
     final fabIconColor = isDarkMode ? Colors.black : Colors.white;
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-
-      // ==========================================
-      // [6] الشريط العلوي (AppBar) مع تبديل حالة البحث
-      // ==========================================
-      appBar: AppBar(
-        backgroundColor: backgroundColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: textColor),
-          onPressed: () => Navigator.pop(context),
+    return AppScaffold(
+      showBackButton: false,
+      title: "",
+      actions: [
+        IconButton(
+          icon: Icon(Icons.logout, color: subTextColor),
+          tooltip: "Logout",
+          onPressed: _logout,
         ),
-        // التبديل بين عرض عنوان التطبيق أو حقل البحث
-        title: isSearching
-            ? TextField(
-          controller: searchController,
-          autofocus: true,
-          onChanged: _filterNotes,
-          style: TextStyle(color: textColor, fontSize: 18),
-          decoration: InputDecoration(
-            hintText: "Search notes...",
-            border: InputBorder.none,
-            hintStyle: TextStyle(color: isDarkMode ? Colors.grey[500] : Colors.grey),
-          ),
-        )
-            : Text(
-          "Smart Notes",
-          style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 20),
+        IconButton(
+          icon: Icon(isSearching ? Icons.close : Icons.search, color: subTextColor),
+          onPressed: () {
+            setState(() {
+              isSearching = !isSearching;
+              if (!isSearching) {
+                searchController.clear();
+                filteredNotes = notes;
+              }
+            });
+          },
         ),
-        actions: [
-          // زر تفعيل أو إغلاق البحث
-          IconButton(
-            icon: Icon(isSearching ? Icons.close : Icons.search, color: subTextColor),
-            onPressed: () {
-              setState(() {
-                isSearching = !isSearching;
-                if (!isSearching) {
-                  searchController.clear();
-                  filteredNotes = notes; // إعادة تعيين الملاحظات عند إغلاق البحث
-                }
-              });
-            },
-          ),
-        ],
-      ),
-
-      // ==========================================
-      // [7] جسم الصفحة الرئيسي وعرض الملاحظات (Body Content)
-      // ==========================================
+      ],
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (isSearching)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 15.0),
+                child: TextField(
+                  controller: searchController,
+                  autofocus: true,
+                  onChanged: _filterNotes,
+                  style: TextStyle(color: textColor, fontSize: 18),
+                  decoration: InputDecoration(
+                    hintText: "Search by title...",
+                    border: InputBorder.none,
+                    hintStyle: TextStyle(color: isDarkMode ? Colors.grey[500] : Colors.grey),
+                  ),
+                ),
+              ),
             Text(
               "Welcome Back!",
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: textColor),
@@ -206,78 +206,44 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(fontSize: 14, color: subTextColor),
             ),
             const SizedBox(height: 20),
-
-            // عرض المحتوى بناءً على حالة التحميل أو خلو القائمة
             Expanded(
               child: isLoading
-                  ? const Center(child: CircularProgressIndicator()) // مؤشر تحميل البيانات
+                  ? const Center(child: CircularProgressIndicator())
                   : filteredNotes.isEmpty
-                  ? Center(
-                child: Text(
-                  "No notes found. Tap '+' to add one.",
-                  style: TextStyle(color: subTextColor, fontSize: 14),
-                ),
-              )
+                  ? Center(child: Text("No notes found.", style: TextStyle(color: subTextColor, fontSize: 14)))
                   : ListView.builder(
                 itemCount: filteredNotes.length,
                 itemBuilder: (context, index) {
                   final note = filteredNotes[index];
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+                    decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16)),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(16),
-                      // النقر لتعديل الملاحظة الحالية
                       onTap: () async {
                         final result = await Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => EditNoteScreen(note: note),
-                          ),
+                          MaterialPageRoute(builder: (context) => EditNoteScreen(note: note)),
                         );
-                        if (result == true) {
-                          _fetchNotesFromSupabase(); // تحديث القائمة عند العودة بحفظ ناجح
-                        }
+                        if (result == true) _fetchNotesFromSupabase();
                       },
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // عنوان الملاحظة
-                                  Text(
-                                    note['title'] ?? '',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: textColor,
-                                    ),
-                                  ),
+                                  Text(note['title'] ?? '', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor)),
                                   const SizedBox(height: 8),
-                                  // محتوى الملاحظة
-                                  Text(
-                                    note['content'] ?? '',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: isDarkMode ? Colors.white70 : Colors.black54,
-                                    ),
-                                  ),
+                                  Text(note['content'] ?? '', style: TextStyle(fontSize: 14, color: isDarkMode ? Colors.white70 : Colors.black54)),
                                 ],
                               ),
                             ),
-                            // زر حذف الملاحظة المفردة
                             IconButton(
                               icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                              onPressed: () {
-                                _showDeleteDialog(note['id']);
-                              },
+                              onPressed: () => _showDeleteDialog(note['id']),
                             ),
                           ],
                         ),
@@ -290,23 +256,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-
-      // ==========================================
-      // [8] زر الإضافة العائم (Floating Action Button)
-      // ==========================================
       floatingActionButton: FloatingActionButton(
         backgroundColor: fabColor,
         onPressed: () async {
-          // الانتقال لشاشة التعديل/الإضافة لإنشاء ملاحظة جديدة
           final result = await Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const EditNoteScreen(),
-            ),
+            MaterialPageRoute(builder: (context) => const EditNoteScreen()),
           );
-          if (result == true) {
-            _fetchNotesFromSupabase(); // تحديث القائمة بعد إضافة ملاحظة جديدة
-          }
+          if (result == true) _fetchNotesFromSupabase();
         },
         child: Icon(Icons.add, color: fabIconColor),
       ),

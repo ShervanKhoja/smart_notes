@@ -1,124 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
-import 'main.dart'; // استدعاء themeNotifier للتحكم بالوضع الليلي لكل التطبيق
-import 'about_app.dart'; // استيراد صفحة عن البرنامج
-import 'about_developer.dart'; // استيراد صفحة عن المطور
+import 'app_scaffold.dart'; // استدعاء القالب المشترك الموحد
 
-class OnboardingScreen extends StatefulWidget {
+class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({Key? key}) : super(key: key);
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
-}
-
-class _OnboardingScreenState extends State<OnboardingScreen> {
-  @override
   Widget build(BuildContext context) {
-    // ==========================================
-    // [1] فقرة تهيئة الثيم والألوان المتجاوبة
-    // ==========================================
-    // معرفة هل الوضع الحالي ليلي أم لا بناءً على الثيم العام للتطبيق
-    final bool isDarkMode = themeNotifier.value == ThemeMode.dark;
-
-    // تحديد الألوان المتغيرة (دنانيميكياً) بناءً على ما إذا كان الوضع ليلياً أو نهارياً
-    final backgroundColor = isDarkMode ? Colors.grey[900] : Colors.white;
-    final textColor = isDarkMode ? Colors.white : Colors.black;
-    final subTextColor = isDarkMode ? Colors.white70 : Colors.grey.shade700;
+    // تحديد لون الزر بناءً على الوضع الحالي (ليلي أو نهاري)
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final buttonColor = isDarkMode ? Colors.grey[800] : Colors.black;
+    final subTextColor = isDarkMode ? Colors.white70 : Colors.grey.shade700;
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-
-      // ==========================================
-      // [2] فقرة القائمة الجانبية (Drawer)
-      // ==========================================
-      // القائمة الجانبية المنسدلة من الجانب وتحتوي على الروابط والوضع الليلي
-      drawer: Drawer(
-        backgroundColor: backgroundColor,
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            // رأس القائمة الجانبية (معلومات التطبيق والشعار)
-            UserAccountsDrawerHeader(
-              accountName: Text(
-                "Smart Notes",
-                style: TextStyle(color: isDarkMode ? Colors.white : Colors.black, fontWeight: FontWeight.bold),
-              ),
-              accountEmail: Text(
-                "Version 1.0.0",
-                style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54),
-              ),
-              currentAccountPicture: CircleAvatar(
-                backgroundColor: isDarkMode ? Colors.grey[800] : Colors.black,
-                child: const Icon(Icons.note_alt, size: 30, color: Colors.white),
-              ),
-              decoration: BoxDecoration(
-                color: isDarkMode ? Colors.black : Colors.grey.shade200,
-              ),
-            ),
-
-            // ==========================================
-            // [3] فقرة أزرار التنقل داخل القائمة
-            // ==========================================
-            // [زر عن البرنامج]: عند النقر عليه يتم إغلاق القائمة والانتقال لصفحة AboutAppScreen
-            ListTile(
-              leading: Icon(Icons.info_outline, color: textColor),
-              title: Text('عن البرنامج', style: TextStyle(color: textColor)),
-              onTap: () {
-                Navigator.pop(context); // حركة إغلاق القائمة الجانبية
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AboutAppScreen()),
-                );
-              },
-            ),
-
-            // [زر عن المطور]: عند النقر عليه يتم إغلاق القائمة والانتقال لصفحة AboutDeveloperScreen
-            ListTile(
-              leading: Icon(Icons.person, color: textColor),
-              title: Text('عن المطور', style: TextStyle(color: textColor)),
-              onTap: () {
-                Navigator.pop(context); // حركة إغلاق القائمة الجانبية
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AboutDeveloperScreen()),
-                );
-              },
-            ),
-
-            Divider(color: isDarkMode ? Colors.grey[700] : Colors.grey.shade300),
-
-            // ==========================================
-            // [4] زر حركة التبديل للوضع الليلي (Switch)
-            // ==========================================
-            // يتحكم بالوضع الليلي لكامل التطبيق، وتتغير أيقونته ديناميكياً (شمس في النهار، قمر في الليل)
-            SwitchListTile(
-              secondary: Icon(
-                isDarkMode ? Icons.nights_stay : Icons.wb_sunny_outlined,
-                color: textColor,
-              ),
-              title: Text('الوضع الليلي', style: TextStyle(color: textColor)),
-              value: isDarkMode,
-              onChanged: (bool value) {
-                setState(() {
-                  // حركة تغيير الثيم وتحديث حالة التطبيق بالكامل
-                  themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
-                });
-              },
-            ),
-          ],
-        ),
-      ),
-
-      // ==========================================
-      // [5] الشريط العلوي (AppBar)
-      // ==========================================
-      // يحتوي على زر فتح القائمة الجانبية (ثلاثة خطوط) المتكيف مع لون النص
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: IconThemeData(color: textColor),
-      ),
+    return AppScaffold(
+      title: "", // العنوان في الشريط العلوي
+      showBackButton: false, // تم إخفاء زر الرجوع لأنها الصفحة الأولى
 
       // ==========================================
       // [6] جسم الصفحة الرئيسي (Body Content)
@@ -147,7 +43,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               const Spacer(flex: 1),
 
               // ==========================================
-              // [8] فقرة العصوص والعناوين الرئيسية
+              // [8] فقرة النصوص والعناوين الرئيسية
               // ==========================================
               // العنوان الرئيسي البارز في الصفحة
               Text(
@@ -156,7 +52,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: textColor,
                   height: 1.2,
                 ),
               ),
@@ -180,7 +75,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               // ==========================================
               // [9] زر البدء الرئيسي (Let's Start Button)
               // ==========================================
-              // الزر الكبير أسفل الصفحة مع تأثير الظل والانحناء للانتقال لصفحة إنشاء الحساب
+              // الزر الكبير أسفل الصفحة مع تأثير الظل والانحناء للانتقال لصفحة تسجيل الدخول
               SizedBox(
                 width: double.infinity,
                 height: 60,
@@ -194,8 +89,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                   ),
                   onPressed: () {
-                    // حركة الانتقال لصفحة التسجيل عند الضغط على الزر
-                    Navigator.pushNamed(context, '/create-profile');
+                    // الانتقال لصفحة تسجيل الدخول عند الضغط على الزر
+                    Navigator.pushNamed(context, '/login');
                   },
                   child: const Text(
                     "Let's Start",
@@ -208,8 +103,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 25),
-              const SizedBox(height: 10),
+              const SizedBox(height: 35),
             ],
           ),
         ),

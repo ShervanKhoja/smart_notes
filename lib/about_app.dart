@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'main.dart'; // استدعاء themeNotifier للتحكم بالوضع الليلي
+import 'app_scaffold.dart'; // استيراد القالب المشترك الموحد
 
 class AboutAppScreen extends StatelessWidget {
   const AboutAppScreen({Key? key}) : super(key: key);
@@ -10,31 +11,16 @@ class AboutAppScreen extends StatelessWidget {
     // [1] فقرة الألوان والتصميم المتجاوب مع الثيم (Theme & Colors)
     // ==========================================
     final bool isDarkMode = themeNotifier.value == ThemeMode.dark;
-    final backgroundColor = isDarkMode ? Colors.grey[900] : Colors.white;
     final textColor = isDarkMode ? Colors.white : Colors.black;
     final subTextColor = isDarkMode ? Colors.white70 : Colors.grey.shade600;
     final cardColor = isDarkMode ? Colors.grey[850] : Colors.grey.shade100;
     final accentColor = Colors.blueAccent;
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-
+    return AppScaffold(
       // ==========================================
-      // [2] الشريط العلوي (AppBar)
+      // [2] الشريط العلوي (AppBar) القادم من AppScaffold
       // ==========================================
-      appBar: AppBar(
-        backgroundColor: backgroundColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: textColor),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          "عن البرنامج",
-          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-      ),
+      title: "About App",
 
       // ==========================================
       // [3] جسم الصفحة الرئيسي (Body Content)
@@ -100,7 +86,7 @@ class AboutAppScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                "تطبيق ذكي لإدارة وتنظيم الملاحظات والأفكار بكل سهولة",
+                "A smart application to manage and organize notes and ideas with ease",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,

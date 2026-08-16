@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'main.dart'; // استدعاء themeNotifier للتحكم بالوضع الليلي
+import 'app_scaffold.dart'; // استيراد القالب المشترك الموحد
 
 class AboutDeveloperScreen extends StatelessWidget {
   const AboutDeveloperScreen({Key? key}) : super(key: key);
@@ -10,31 +11,16 @@ class AboutDeveloperScreen extends StatelessWidget {
     // [1] فقرة الألوان والتصميم المتجاوب مع الثيم (Theme & Colors)
     // ==========================================
     final bool isDarkMode = themeNotifier.value == ThemeMode.dark;
-    final backgroundColor = isDarkMode ? Colors.grey[900] : Colors.white;
     final textColor = isDarkMode ? Colors.white : Colors.black;
     final subTextColor = isDarkMode ? Colors.white70 : Colors.grey.shade600;
     final cardColor = isDarkMode ? Colors.grey[850] : Colors.grey.shade100;
     final accentColor = Colors.blueAccent;
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-
+    return AppScaffold(
       // ==========================================
-      // [2] الشريط العلوي (AppBar)
+      // [2] الشريط العلوي (AppBar) القادم من AppScaffold
       // ==========================================
-      appBar: AppBar(
-        backgroundColor: backgroundColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: textColor),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          "عن المطور",
-          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-      ),
+      title: "About Developer",
 
       // ==========================================
       // [3] جسم الصفحة الرئيسي (Body Content)
@@ -88,7 +74,7 @@ class AboutDeveloperScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "المطور",
+                          "Developer",
                           style: TextStyle(
                             fontSize: 15,
                             color: accentColor,
@@ -139,7 +125,7 @@ class AboutDeveloperScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          "استوديو التطوير",
+                          "Development Studio",
                           style: TextStyle(
                             fontSize: 15,
                             color: Colors.orangeAccent,
@@ -173,7 +159,7 @@ class AboutDeveloperScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                "تم تطوير هذا التطبيق بعناية فائقة لتسهيل إدارة مهامك اليومية وتنظيم أفكارك بكل احترافية.",
+                "This application has been carefully crafted to make managing your daily tasks and organizing your ideas professional and seamless.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 15,

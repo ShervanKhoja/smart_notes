@@ -79,9 +79,9 @@ class SmartNotesApp extends StatelessWidget {
           // ==========================================
           initialRoute: '/',
           routes: {
-            '/': (context) => const OnboardingScreen(), // الشاشة الافتتاحية الأولى
-            '/create-profile': (context) => const CreateProfileScreen(), // شاشة إنشاء الحساب
-            '/login': (context) => LoginScreen(), // شاشة تسجيل الدخول (بدون const لتجنب الأخطاء مع الـ controllers)
+            '/': (context) => const OnboardingScreen(), // الشاشة الافتتاحية الأولى (الترحيب)
+            '/login': (context) => const LoginScreen(), // شاشة تسجيل الدخول (ستفتح بعد الـ Onboarding)
+            '/create-profile': (context) => const CreateProfileScreen(), // شاشة إنشاء الحساب (تفتح عند الضغط على Sign Up)
             '/home': (context) => const HomeScreen(), // الشاشة الرئيسية للملاحظات
             '/edit-note': (context) => const EditNoteScreen(), // شاشة تعديل الملاحظات
           },

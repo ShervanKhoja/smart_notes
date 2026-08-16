@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'main.dart';
+import 'app_scaffold.dart';
 
 class EditNoteScreen extends StatefulWidget {
-  final Map<String, dynamic>? note; // استقبال الملاحظة في حال التعديل (تكون فارغة في حال الإضافة)
+  final Map<String, dynamic>? note;
 
   const EditNoteScreen({Key? key, this.note}) : super(key: key);
 
@@ -12,203 +13,185 @@ class EditNoteScreen extends StatefulWidget {
 }
 
 class _EditNoteScreenState extends State<EditNoteScreen> {
-  // ==========================================
-  // [1] متحكمات الحقول وحالات الشاشة (Controllers & States)
-  // ==========================================
   late TextEditingController titleController;
   late TextEditingController contentController;
-  bool _isSaving = false; // مؤشر لحالة الحفظ لمنع الضغط المزدوج
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    // تهيئة الحقول بالبيانات السابقة إذا كانت الملاحظة موجودة، أو تركها فارغة للإضافة الجديدة
     titleController = TextEditingController(text: widget.note?['title'] ?? '');
     contentController = TextEditingController(text: widget.note?['content'] ?? '');
   }
 
   @override
   void dispose() {
-    // التخلص من المتحكمات لتحرير الذاكرة عند إغلاق الصفحة
     titleController.dispose();
     contentController.dispose();
     super.dispose();
   }
 
-  // ==========================================
-  // [2] دالة الحفظ والتعديل في قاعدة بيانات Supabase (Save/Update Function)
-  // ==========================================
   Future<void> _saveNote() async {
     if (_isSaving) return;
-
     final title = titleController.text.trim();
     final content = contentController.text.trim();
 
-    // إذا كانت الحقول فارغة تماماً، يتم الخروج دون حفظ
-    if (title.isEmpty && content.isEmpty) {
-      Navigator.pop(context, false);
-      return;
-    }
+    if (title.isEmpty && content.isEmpty) return;
 
-    setState(() {
-      _isSaving = true; // بدء التحميل وتفعيل مؤشر الحفظ
-    });
+    setState(() => _isSaving = true);
 
     try {
       final user = Supabase.instance.client.auth.currentUser;
-
       if (widget.note == null) {
-        // [إضافة]: إضافة ملاحظة جديدة إلى جدول notes مع ربطها بمعرف المستخدم الحالي
         await Supabase.instance.client.from('notes').insert({
           'title': title,
           'content': content,
           'user_id': user?.id ?? '',
         });
       } else {
-        // [تعديل]: تحديث ملاحظة موجودة مسبقاً بناءً على معرف الملاحظة (id)
         await Supabase.instance.client.from('notes').update({
           'title': title,
           'content': content,
         }).eq('id', widget.note!['id']);
       }
-
-      if (mounted) {
-        Navigator.pop(context, true); // إرجاع true لإخبار الشاشة الرئيسية بإعادة تحميل القائمة
-      }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("حدث خطأ أثناء الحفظ: $e")),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isSaving = false; // إيقاف مؤشر الحفظ
-        });
-      }
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
-  // ==========================================
-  // [3] دالة التعامل مع الرجوع التلقائي وحفظ التغييرات (WillPopScope)
-  // ==========================================
-  Future<bool> _onWillPop() async {
-    // إذا كانت الحقول فارغة، يتم السماح بالرجوع فوراً دون حفظ
-    if (titleController.text.isEmpty && contentController.text.isEmpty) {
+  // نافذة الحوار مترجمة بالكامل إلى الإنجليزية (Save Changes)
+  Future<bool> _handlePop() async {
+    if (titleController.text.trim().isEmpty && contentController.text.trim().isEmpty) {
       return true;
     }
 
-    // حفظ الملاحظة تلقائياً عند محاولة الخروج من الصفحة
-    await _saveNote();
-    return false;
+    final bool? shouldPop = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        final bool isDarkMode = themeNotifier.value == ThemeMode.dark;
+        return AlertDialog(
+          backgroundColor: isDarkMode ? Colors.grey[850] : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            "Save Changes",
+            style: TextStyle(color: isDarkMode ? Colors.white : Colors.black, fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            "Do you want to save changes before leaving?",
+            style: TextStyle(color: isDarkMode ? Colors.grey[300] : Colors.grey[800]),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text("Don't Save", style: TextStyle(color: Colors.red)),
+            ),
+            TextButton(
+              onPressed: () async {
+                await _saveNote();
+                if (context.mounted) Navigator.of(context).pop(true);
+              },
+              child: const Text("Save", style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+    return shouldPop ?? false;
+  }
+
+  Future<void> _onBackPressed() async {
+    final shouldPop = await _handlePop();
+    if (shouldPop && mounted) {
+      Navigator.of(context).pop(true);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // تحديد الثيم والألوان ديناميكياً
     final bool isDarkMode = themeNotifier.value == ThemeMode.dark;
-
-    final backgroundColor = isDarkMode ? Colors.grey[900] : Colors.white;
     final textColor = isDarkMode ? Colors.white : Colors.black;
     final inputFillColor = isDarkMode ? Colors.grey[850] : Colors.grey.shade100;
-    final buttonColor = isDarkMode ? Colors.white : Colors.black;
-    final buttonTextColor = isDarkMode ? Colors.black : Colors.white;
 
-    return WillPopScope(
-      onWillPop: _onWillPop,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldPop = await _handlePop();
+        if (shouldPop && mounted) {
+          Navigator.of(context).pop(true);
+        }
+      },
       child: Scaffold(
-        backgroundColor: backgroundColor,
-
-        // ==========================================
-        // [4] الشريط العلوي (AppBar)
-        // ==========================================
+        backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
         appBar: AppBar(
-          backgroundColor: backgroundColor,
+          backgroundColor: Colors.transparent,
           elevation: 0,
+          centerTitle: true,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios, color: textColor),
-            onPressed: () async {
-              if (await _onWillPop()) {
-                Navigator.pop(context, false);
-              }
-            },
+            icon: Icon(Icons.arrow_back_ios, color: textColor, size: 20),
+            onPressed: _onBackPressed,
           ),
-          // عنوان الصفحة يتغير ديناميكياً (إضافة أو تعديل)
           title: Text(
             widget.note == null ? "Add Note" : "Edit Note",
-            style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+            style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 18),
           ),
-          centerTitle: true,
         ),
-
-        // ==========================================
-        // [5] جسم الصفحة الرئيسي وحقول الإدخال (Body Content)
-        // ==========================================
         body: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // حقل عنوان الملاحظة (Title Field)
-              Text("Name Note", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor)),
+              Text("Title", style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
               const SizedBox(height: 8),
               TextField(
                 controller: titleController,
                 style: TextStyle(color: textColor),
                 decoration: InputDecoration(
-                  hintText: "Enter note title...",
-                  hintStyle: TextStyle(color: isDarkMode ? Colors.grey[500] : Colors.grey),
                   filled: true,
                   fillColor: inputFillColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
-                  ),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
                 ),
               ),
               const SizedBox(height: 20),
-
-              // حقل محتوى الملاحظة (Content Field)
-              Text("Content", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor)),
+              Text("Content", style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
               const SizedBox(height: 8),
               TextField(
                 controller: contentController,
                 maxLines: 5,
                 style: TextStyle(color: textColor),
                 decoration: InputDecoration(
-                  hintText: "Write your note here...",
-                  hintStyle: TextStyle(color: isDarkMode ? Colors.grey[500] : Colors.grey),
                   filled: true,
                   fillColor: inputFillColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
-                  ),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
                 ),
               ),
               const Spacer(),
-
-              // ==========================================
-              // [6] زر الحفظ (Save Button)
-              // ==========================================
               SizedBox(
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: buttonColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+                    backgroundColor: isDarkMode ? Colors.white : Colors.black,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
-                  onPressed: _isSaving ? null : _saveNote, // تعطيل الزر أثناء عملية الحفظ
+                  onPressed: _isSaving
+                      ? null
+                      : () async {
+                    await _saveNote();
+                    if (mounted) Navigator.pop(context, true);
+                  },
                   child: _isSaving
-                      ? const CircularProgressIndicator(color: Colors.blueAccent) // مؤشر تحميل داخلي
-                      : Text(
-                    "Save",
-                    style: TextStyle(fontSize: 18, color: buttonTextColor, fontWeight: FontWeight.bold),
-                  ),
+                      ? const CircularProgressIndicator()
+                      : Text("Save", style: TextStyle(color: isDarkMode ? Colors.black : Colors.white)),
                 ),
               ),
               const SizedBox(height: 20),
